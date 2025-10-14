@@ -1,7 +1,4 @@
-# Club 22 - Analyse des Joueurs FIFA 22
-
-![Club 22 Logo](assets/cover.jpg)
-
+# Projet App Fantasy League 
 
 ## Description
 
