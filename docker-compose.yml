@@ -28,12 +28,14 @@ services:
       ALGORITHM: ${ALGORITHM}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
       BUDGET: ${BUDGET}
+      PYTHONPATH: /app
     ports:
       - "8000:8000"
     volumes:
       - .:/app
     # Avant de démarrer uvicorn, on exécute le script de seed
-    command: bash -c "python app/seed.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    command: bash -c "python3 -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
 
 volumes:
   db_data:
