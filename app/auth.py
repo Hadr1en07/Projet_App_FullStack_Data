@@ -22,7 +22,7 @@ from .database import SessionLocal
 # Récupération des variables d'environnement
 SECRET_KEY = os.getenv("SECRET_KEY", "changeme")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
 # Initialisation du contexte de hachage pour les mots de passe
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
@@ -43,24 +43,10 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Crée un token JWT avec une date d'expiration.
-
-    Args:
-        data: les données à inclure dans le payload du token.
-        expires_delta: durée de validité du token.
-
-    Returns:
-        Le token JWT sous forme de chaîne.
-    """
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+def create_access_token(subject: str) -> str:
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode = {"sub": subject, "exp": expire}
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
 def get_user_by_email(db: Session, email: str) -> Optional[models.User]:

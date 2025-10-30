@@ -1,45 +1,54 @@
-"""Routes d'authentification.
-
-Ce routeur expose les endpoints pour l'inscription et la connexion des
-utilisateurs.  L'enregistrement est ouvert, tandis que le login
-retourne un token JWT à utiliser pour les routes protégées.
-"""
-
-from fastapi import APIRouter, Depends, HTTPException, status
+# app/routers/auth.py
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
-from .. import schemas, crud, auth
 from ..dependencies import get_db
-
+from .. import models, schemas
+from ..auth import verify_password, hash_password, create_access_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-
+# --- Register (JSON) ---
 @router.post("/register", response_model=schemas.UserOut, status_code=status.HTTP_201_CREATED)
 def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
-    """Enregistre un nouvel utilisateur.
+    if db.query(models.User).filter(models.User.email == user_in.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+    user = models.User(email=user_in.email, hashed_password=hash_password(user_in.password))
+    db.add(user); db.commit(); db.refresh(user)
+    return user
 
-    Retourne les informations publiques de l'utilisateur créé.  Un
-    utilisateur ayant déjà un compte avec le même email provoque une
-    erreur 400.
-    """
-    # Vérifier l'unicité de l'email via get_user_by_email
-    if auth.get_user_by_email(db, user_in.email):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
-    user = crud.create_user(db, user_in)
-    return schemas.UserOut.from_orm(user)
-
+# --- Login: accepte FORM ou JSON ---
+class LoginJSON(BaseModel):
+    username: EmailStr
+    password: str
 
 @router.post("/login", response_model=schemas.Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    """Authentifie un utilisateur et retourne un token JWT."""
-    user = auth.authenticate_user(db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token = auth.create_access_token(data={"sub": user.email})
-    return schemas.Token(access_token=access_token, token_type="bearer")
+async def login(
+    request: Request,
+    db: Session = Depends(get_db),
+    form_data: OAuth2PasswordRequestForm = Depends()
+):
+    # 1) tenter form-data (Swagger par défaut)
+    username = getattr(form_data, "username", None)
+    password = getattr(form_data, "password", None)
+
+    # 2) sinon, tenter JSON
+    if not username or not password:
+        try:
+            body = await request.json()
+            username = body.get("username")
+            password = body.get("password")
+        except Exception:
+            pass
+
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="username and password required")
+
+    user = db.query(models.User).filter(models.User.email == username).first()
+    if not user or not verify_password(password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
+
+    token = create_access_token(subject=user.email)
+    return {"access_token": token, "token_type": "bearer"}
