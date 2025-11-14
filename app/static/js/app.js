@@ -141,14 +141,14 @@ async function loadTeam() {
 
 async function createTeam(ev) {
   ev.preventDefault();
-  const name = S("#teamName").value.trim();
-  const msg = S("#teamMsg");
+  const name = $("#teamName").value.trim();
+  const msg = $("#teamMsg");
   if (!name) return toast(msg, "Nom requis", false);
 
   try {
     await apiFetch("/team", { method: "POST", body: { name }, auth: true }); // ✅ pas de ?local_kw=
     toast(msg, "Équipe créée", true);
-    S("#teamName").value = "";
+    $("#teamName").value = "";
     await loadTeam();
   } catch (e) {
     const errText = (e && e.message) ? e.message : String(e);

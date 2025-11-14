@@ -58,7 +58,6 @@ class PlayerOut(BaseModel):
     name: str
     club: str
     position: str
-    # adapte si ton champ prix s'appelle cost / price / price_m
     cost: Optional[float] = None
 
     class Config:
@@ -70,7 +69,7 @@ class TeamBase(BaseModel):
 
 
 class TeamCreate(BaseModel):
-    name: str  # ⬅️ on ne passe plus par "players" à la création
+    name: str
 
 class TeamOut(BaseModel):
     id: int

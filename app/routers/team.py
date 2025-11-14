@@ -7,6 +7,8 @@ Un utilisateur possède au plus une équipe.
 - DELETE /team/players/{player_id} : retirer un joueur
 """
 
+#commentaire test
+import os
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -15,8 +17,9 @@ from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 
 from .. import models, schemas, crud, auth
-from ..dependencies import get_db   # ⬅️ IMPORTANT : on n’importe plus get_current_user
+from ..dependencies import get_db 
 
+BUDGET = int(os.getenv("BUDGET", "100000000"))  # 100 M€ par défaut
 
 router = APIRouter(prefix="/team", tags=["team"])
 
@@ -50,8 +53,6 @@ def create_or_reset_team(
     payload: schemas.TeamCreate,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_active_user),
-    # compat avec l'ancien front : on accepte ?local_kw= mais on l'ignore
-    _ignore: Optional[str] = Query(None, alias="local_kw", description="ignored"),
 ):
     existing = db.query(models.Team).filter(models.Team.owner_id == current_user.id).first()
 
@@ -91,7 +92,7 @@ def add_players(
             detail="Team not found",
         )
 
-    team = crud.add_players_to_team(db, team, players)
+    team = crud.add_players_to_team(db, team, players, BUDGET)
     return schemas.TeamOut.model_validate(team, from_attributes=True)
 
 
