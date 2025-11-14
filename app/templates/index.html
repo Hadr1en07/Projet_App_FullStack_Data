@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>MyFantasyLeague • UI</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background:#0b1220; color:#e8eefc; }
+    header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; background:#0e1730; position:sticky; top:0; }
+    h1 { margin:0; font-size:20px; letter-spacing:.3px; }
+    .tag { font-size:12px; padding:2px 8px; border:1px solid #2b3a66; border-radius:999px; color:#9fb4ff; }
+    main { padding:24px 20px; display:grid; gap:20px; grid-template-columns: 340px 1fr; }
+    section, form, .card { background:#0f1a3a; border:1px solid #233063; border-radius:14px; padding:16px; }
+    section h2 { margin:0 0 10px; font-size:16px; color:#bcd0ff; }
+    label { display:block; font-size:12px; color:#9fb4ff; margin:8px 0 4px; }
+    input[type="email"], input[type="password"], input[type="text"] {
+      width:100%; padding:10px 12px; border-radius:10px; border:1px solid #2b3a66; background:#0b1533; color:#e8eefc;
+    }
+    button {
+      background:#4f7dff; border:none; color:white; padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600;
+    }
+    button.ghost { background:transparent; border:1px solid #2b3a66; color:#bcd0ff; }
+    .row { display:flex; gap:10px; }
+    .muted { 
+    color:#8fa5ff; 
+    font-size:12px; 
+    word-break: break-word;        /* NEW */
+    overflow-wrap: anywhere;       /* NEW */
+  }
+  .card { overflow:hidden; }       /* NEW : évite les dépassements internes */
+  main > * { min-width: 0; }       /* NEW : évite que la colonne gonfle */
+    .ok { color:#7fffb0; }
+    .err { color:#ff8799; }
+    .list { display:grid; gap:10px; }
+    .player { display:grid; grid-template-columns: 1fr 90px 110px 100px; align-items:center; gap:8px; padding:10px 12px; border:1px solid #223063; border-radius:12px; background:#0d1837; }
+    .pill { font-size:12px; padding:4px 8px; border-radius:999px; background:#132154; border:1px solid #2b3a66; color:#c6d6ff; text-align:center; }
+    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    .right { text-align:right; }
+    .nowrap { white-space:nowrap; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MyFantasyLeague</h1>
+    <div class="row">
+      <span id="authStatus" class="tag">déconnecté</span>
+      <button id="btnLogout" class="ghost" style="display:none">Se déconnecter</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Colonne gauche -->
+    <div class="col-left list">
+      <!-- Auth -->
+      <section>
+        <h2>Authentification</h2>
+        <p class="muted">Utilise les endpoints existants : <code>/auth/register</code> et <code>/auth/login</code>.</p>
+        <div class="grid2">
+          <div id="formRegister" class="card">
+            <h3>Créer un compte</h3>
+            <label for="regEmail">Email</label>
+            <input id="regEmail" type="email" placeholder="you@example.com" />
+            <label for="regPassword">Mot de passe</label>
+            <input id="regPassword" type="password" placeholder="••••••••" />
+            <div class="row" style="margin-top:10px">
+              <button id="btnRegister" type="button">S’inscrire</button>
+            </div>
+            <div id="regMsg" class="muted" style="margin-top:6px"></div>
+          </div>
+
+          <div id="formLogin" class="card">
+            <h3>Se connecter</h3>
+            <label for="loginEmail">Email</label>
+            <input id="loginEmail" type="email" placeholder="you@example.com" />
+            <label for="loginPassword">Mot de passe</label>
+            <input id="loginPassword" type="password" placeholder="••••••••" />
+            <div class="row" style="margin-top:10px">
+              <button id="btnLogin" type="button">Se connecter</button>
+            </div>
+            <div id="loginMsg" class="muted" style="margin-top:6px"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Team actions -->
+      <section>
+        <h2>Mon équipe</h2>
+        <div class="row" style="align-items:end">
+          <div style="flex:1">
+            <label for="teamName">Nom de l’équipe</label>
+            <input id="teamName" type="text" placeholder="Dream FC" />
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button id="btnCreateTeam" type="button">Créer / Réinitialiser</button>
+          </div>
+        </div>
+
+        <div id="teamCard" class="card" style="margin-top:10px">
+          <div class="row" style="justify-content:space-between; align-items:center;">
+            <div>
+              <div class="muted">Nom</div>
+              <div id="teamTitle" style="font-weight:700; font-size:18px">–</div>
+            </div>
+            <div class="right">
+              <div class="muted">Budget restant</div>
+              <div id="teamBudget" class="ok">–</div>
+            </div>
+          </div>
+          <div style="margin-top:12px">
+            <div class="muted">Joueurs</div>
+            <div id="teamPlayers" class="list"></div>
+          </div>
+        </div>
+        <div id="teamMsg" class="muted" style="margin-top:6px"></div>
+      </section>
+    </div>
+
+    <!-- Colonne droite -->
+    <div class="col-right list">
+      <section>
+        <h2>Joueurs du pool</h2>
+        <div class="row" style="justify-content:space-between; align-items:center">
+          <div class="muted">GET /players</div>
+          <button id="btnRefreshPlayers" class="ghost" type="button">Rafraîchir</button>
+        </div>
+        <div id="playersList" class="list" style="margin-top:12px"></div>
+        <div id="playersMsg" class="muted" style="margin-top:6px"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- IMPORTANT: defer pour être sûr que le DOM est prêt avant app.js -->
+  <script src="/static/js/app.js" defer></script>
+
+  <div id="ui-error" class="hidden"></div>
+</body>
+</html>

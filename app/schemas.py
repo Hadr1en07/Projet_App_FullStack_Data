@@ -53,25 +53,30 @@ class PlayerUpdate(BaseModel):
     club: Optional[str] = None
 
 
-class PlayerOut(PlayerBase):
+class PlayerOut(BaseModel):
     id: int
+    name: str
+    club: str
+    position: str
+    # adapte si ton champ prix s'appelle cost / price / price_m
+    cost: Optional[float] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class TeamBase(BaseModel):
     name: Optional[str] = None
 
 
-class TeamCreate(TeamBase):
-    players: List[int] = []  # liste des IDs de joueurs à ajouter
+class TeamCreate(BaseModel):
+    name: str  # ⬅️ on ne passe plus par "players" à la création
 
-
-class TeamOut(TeamBase):
+class TeamOut(BaseModel):
     id: int
+    name: str
     owner_id: int
-    players: List[PlayerOut]
+    players: List[PlayerOut] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
