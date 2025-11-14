@@ -1,10 +1,14 @@
-# MyFantasyLeague
+# Projet MyFantasyLeague
 
-MyFantasyLeague est une application de type _fantasy football_ développée en Python avec [FastAPI](https://fastapi.tiangolo.com/), [SQLAlchemy](https://www.sqlalchemy.org/) et [PostgreSQL](https://www.postgresql.org/).  Le projet a été réalisé dans le cadre d'un devoir de **DevOps** et respecte l'intégralité des exigences demandées :
+MyFantasyLeague est une application de type _fantasy football_ développée en Python avec [FastAPI](https://fastapi.tiangolo.com/), [SQLAlchemy](https://www.sqlalchemy.org/) et [PostgreSQL](https://www.postgresql.org/).  Le projet a été réalisé dans le cadre d'un cours appelé "Application Full Stack Data" enseigné par Monsieur Morgan Courivaud à ESIEE Paris. Ce cours est enseigné en dernière année d'école ingénieur (5ème année) pour l'ensemble de la filière "Data Science & Intelligence Artificelle"
+
+### Projet réalisé par Hadrien DEJONGHE & Esteban NABONNE - E5 DSIA
+
+Il respecte l'intégralité des exigences demandées :
 
 ## 🎯 Objectifs
 
-L'application permet à chaque utilisateur de créer son **équipe de rêve** en sélectionnant des joueurs parmi une base de données partagée.  Les principales fonctionnalités sont :
+L'application permet à chaque utilisateur de créer son **équipe de rêve** en sélectionnant des joueurs parmi une base de données récupérée. Les principales fonctionnalités sont :
 
 - Création et authentification des utilisateurs via JWT ;
 - Gestion CRUD (création, lecture, mise à jour, suppression) des joueurs ;
@@ -21,7 +25,7 @@ L'application permet à chaque utilisateur de créer son **équipe de rêve** en
 
    ```bash
    git clone <url_du_repo>
-   cd myfantasyleague
+   cd Projet_App_FullStack_Data
    ```
 
 2. **Copier le fichier d'exemple d'environnement** et l'adapter si nécessaire :
@@ -37,7 +41,7 @@ L'application permet à chaque utilisateur de créer son **équipe de rêve** en
    docker‑compose up --build
    ```
 
-   Cela démarre deux conteneurs : `web` pour l'API et `db` pour PostgreSQL.  L'API est accessible à l'adresse <http://localhost:8000>, et la documentation interactive (Swagger) est disponible sur <http://localhost:8000/docs>.
+   Cela démarre deux conteneurs : `web` pour l'API et `db` pour PostgreSQL.  L'API est accessible à l'adresse <http://localhost:8000>/ui, et la documentation interactive (Swagger) est disponible sur <http://localhost:8000/docs>.
 
 4. **Tester l'API** : consultez la documentation Swagger pour essayer les endpoints.  Utilisez le compte admin (`admin@example.com` / `admin123`) ou créez votre propre utilisateur via l'endpoint `/auth/register`.
 
@@ -92,4 +96,4 @@ myfantasyleague/
 - **Migration Alembic** : utiliser Alembic pour gérer l'évolution du schéma via des migrations ;
 - **Interface Web** : proposer un front‑end React ou Vue pour rendre l'expérience utilisateur plus agréable.
 
-Bon développement et amusez‑vous à créer votre équipe ! 🥅
+Amusez‑vous à créer votre équipe ! 🥅
