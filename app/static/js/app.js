@@ -146,7 +146,7 @@ async function createTeam(ev) {
   if (!name) return toast(msg, "Nom requis", false);
 
   try {
-    await apiFetch("/team", { method: "POST", body: { name }, auth: true }); // ✅ pas de ?local_kw=
+    await apiFetch("/team", { method: "POST", body: { name }, auth: true });
     toast(msg, "Équipe créée", true);
     $("#teamName").value = "";
     await loadTeam();

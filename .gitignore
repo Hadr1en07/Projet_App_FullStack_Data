@@ -1,0 +1,4 @@
+#type of files to ignore
+__pycache__/
+.DS_Store
+*/.DS_Store
