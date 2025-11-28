@@ -11,6 +11,7 @@ from . import models
 from .routers import auth as auth_router
 from .routers import players as players_router
 from .routers import team as team_router
+from . import seed
 
 app = FastAPI(
     title="MyFantasyLeague",
@@ -38,6 +39,13 @@ def ui_root():
 # DB : créer les tables (si besoin)
 models.Base.metadata.create_all(bind=engine)
 
+@app.on_event("startup")
+def startup_event():
+    # Crée les tables
+    models.Base.metadata.create_all(bind=engine)
+    # Lance le remplissage si la table Player est vide
+    seed.seed()
+
 # Routers
 app.include_router(auth_router.router)
 app.include_router(players_router.router)
@@ -46,3 +54,6 @@ app.include_router(team_router.router)
 @app.get("/", tags=["default"])
 def read_root():
     return {"message": "Bienvenue sur MyFantasyLeague API"}
+
+
+

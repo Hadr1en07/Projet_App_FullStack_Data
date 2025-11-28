@@ -76,6 +76,8 @@ class TeamOut(BaseModel):
     name: str
     owner_id: int
     players: List[PlayerOut] = []
+    budget_left: Optional[int] = None
+    total_budget: Optional[int] = None
 
     class Config:
         from_attributes = True

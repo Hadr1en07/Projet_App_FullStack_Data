@@ -59,18 +59,39 @@ function toast(el, msg, ok = true) {
 }
 
 // ========= Players =========
+// app/static/js/app.js
+
+// --- Variables globales pour la pagination ---
+let currentOffset = 0;
+const PAGE_SIZE = 50;
+
+// ========= Players =========
 async function loadPlayers() {
   const list = $("#playersList");
   const msg = $("#playersMsg");
+  const btnPrev = $("#btnPrev");
+  const btnNext = $("#btnNext");
+  const pageInd = $("#pageIndicator");
+
   if (list) list.innerHTML = "";
   toast(msg, "Chargement…", true);
+
   try {
-    const data = await apiFetch("/players");
+    // On appelle l'API avec les paramètres skip et limit
+    // GET /players?skip=0&limit=50
+    const url = `/players?skip=${currentOffset}&limit=${PAGE_SIZE}`;
+    const data = await apiFetch(url);
+
     if (!Array.isArray(data) || !list) throw new Error("format inattendu");
 
     if (!data.length) {
-      list.innerHTML = `<div class="muted">Aucun joueur pour l’instant.</div>`;
+      list.innerHTML = `<div class="muted">Aucun joueur trouvé sur cette page.</div>`;
+      // S'il n'y a plus de joueurs, on désactive le bouton Suivant
+      if (btnNext) btnNext.disabled = true;
     } else {
+      // Réactivation du bouton Suivant s'il y a des données
+      if (btnNext) btnNext.disabled = (data.length < PAGE_SIZE);
+
       for (const p of data) {
         const row = document.createElement("div");
         row.className = "player";
@@ -82,17 +103,40 @@ async function loadPlayers() {
             <button data-id="${p.id}" class="add">Ajouter</button>
           </div>
         `;
+        // Bouton Ajouter
         row.querySelector(".add").addEventListener("click", () => addPlayerToTeam(p.id));
         list.appendChild(row);
       }
     }
-    toast(msg, `OK (${data.length})`);
+    
+    // Mise à jour de l'état des boutons
+    if (btnPrev) btnPrev.disabled = (currentOffset === 0);
+    if (pageInd) {
+        const pageNum = Math.floor(currentOffset / PAGE_SIZE) + 1;
+        pageInd.textContent = `Page ${pageNum}`;
+    }
+    
+    toast(msg, `OK (${data.length} joueurs)`);
+
   } catch (e) {
-  const errText = (e && e.message) ? e.message : String(e);
-  toast(msg, errText, false);
+    const errText = (e && e.message) ? e.message : String(e);
+    toast(msg, errText, false);
+  }
 }
 
+// Fonctions pour changer de page
+function prevPage() {
+    if (currentOffset >= PAGE_SIZE) {
+        currentOffset -= PAGE_SIZE;
+        loadPlayers();
+    }
 }
+
+function nextPage() {
+    currentOffset += PAGE_SIZE;
+    loadPlayers();
+}
+
 
 // ========= Team =========
 async function loadTeam() {
@@ -100,11 +144,25 @@ async function loadTeam() {
   const budgetEl = $("#teamBudget");
   const playersEl = $("#teamPlayers");
   const msg = $("#teamMsg");
+  const t = await apiFetch("/team", { auth: true });
 
   if (playersEl) playersEl.innerHTML = "";
-  if (nameEl) nameEl.textContent = "–";
-  if (budgetEl) budgetEl.textContent = "–";
+  if (nameEl) nameEl.textContent = t?.name ?? "–";
+    if (budgetEl)
+      budgetEl.textContent =
+        t?.budget_left != null ? `${t.budget_left.toLocaleString()} €` : "–";
   toast(msg, "Chargement…", true);
+
+  const bar = $("#budgetBar");
+    if (bar && t?.total_budget) {
+        // Calcul du pourcentage restant
+        const pct = Math.max(0, (t.budget_left / t.total_budget) * 100);
+        bar.style.width = `${pct}%`;
+        
+        // Bonus : changer la couleur si budget critique (< 10%)
+        if (pct < 10) bar.style.backgroundColor = "#ff5c5c"; // Rouge
+        else bar.style.backgroundColor = "#7fffb0"; // Vert
+    }
 
   try {
     const t = await apiFetch("/team", { auth: true });
@@ -250,6 +308,32 @@ function boot() {
   // Premier chargement
   loadPlayers();
   if (getToken()) loadTeam();
+
+  // Boutons de pagination
+  $("#btnPrev")?.addEventListener("click", prevPage);
+  $("#btnNext")?.addEventListener("click", nextPage);
+  
+  // Le bouton rafraîchir remet à zéro
+  $("#btnRefreshPlayers")?.addEventListener("click", () => {
+      currentOffset = 0;
+      loadPlayers();
+  });
 }
 
+// Fonction pour changer d'onglet
+function switchTab(tabName) {
+  // 1. Enlever la classe "active" de tous les contenus et boutons
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+  // 2. Ajouter la classe "active" au bon contenu
+  const contentId = (tabName === 'auth') ? 'viewAuth' : 'viewGame';
+  document.getElementById(contentId).classList.add('active');
+
+  // 3. Ajouter la classe "active" au bon bouton (astuce simple par index ou texte)
+  // Ici on fait simple : on suppose que le 1er bouton est Auth, le 2eme est Game
+  const btns = document.querySelectorAll('.tab-btn');
+  if (tabName === 'auth') btns[0].classList.add('active');
+  else btns[1].classList.add('active');
+}
 document.addEventListener("DOMContentLoaded", boot);

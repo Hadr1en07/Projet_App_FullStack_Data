@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from . import models, schemas
 from .database import SessionLocal
-
+from .dependencies import get_db
 
 # Récupération des variables d'environnement
 SECRET_KEY = os.getenv("SECRET_KEY", "changeme")
@@ -75,12 +75,9 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[models
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(SessionLocal),
+    db: Session = Depends(get_db),
 ) -> models.User:
-    """Dépendance FastAPI pour récupérer l'utilisateur courant à partir du token.
-
-    Lève une exception HTTP 401 si le token est invalide ou si l'utilisateur n'existe pas.
-    """
+    """Dépendance FastAPI pour récupérer l'utilisateur courant à partir du token."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",

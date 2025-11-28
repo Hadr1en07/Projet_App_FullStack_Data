@@ -38,6 +38,72 @@
     .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
     .right { text-align:right; }
     .nowrap { white-space:nowrap; }
+    /* --- Ajoutez ceci dans votre <style> --- */
+
+/* La barre de navigation des onglets */
+  .tab-nav {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #233063;
+  padding-bottom: 10px;
+  }
+
+/* Les boutons des onglets */
+  .tab-btn {
+  background: transparent;
+  border: none;
+  color: #8fa5ff;
+  font-size: 16px;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+  }
+
+  .tab-btn:hover {
+  background: #132154;
+  color: #bcd0ff;
+  }
+
+/* L'onglet actif */
+  .tab-btn.active {
+  background: #4f7dff;
+  color: white;
+  font-weight: bold;
+  }
+
+/* Par défaut, on cache le contenu des onglets */
+  .tab-content {
+  display: none;
+  }
+
+/* Sauf celui qui a la classe .active */
+  .tab-content.active {
+  display: block;
+  }
+
+/* Ajustement pour que l'onglet Jeu garde sa grille */
+  #viewGame.tab-content.active {
+  display: grid; 
+  gap: 20px; 
+  grid-template-columns: 340px 1fr;
+  }
+
+  .budget-bar-bg {
+  background: #132154;
+  height: 10px;
+  border-radius: 5px;
+  margin-top: 8px;
+  overflow: hidden;
+  }
+
+  .budget-bar-fill {
+  background: #7fffb0; /* Vert ok */
+  height: 100%;
+  width: 100%; /* Sera modifié par JS */
+  transition: width 0.3s ease;
+  }
   </style>
 </head>
 <body>
@@ -50,26 +116,17 @@
   </header>
 
   <main>
-    <!-- Colonne gauche -->
-    <div class="col-left list">
-      <!-- Auth -->
-      <section>
-        <h2>Authentification</h2>
-        <p class="muted">Utilise les endpoints existants : <code>/auth/register</code> et <code>/auth/login</code>.</p>
-        <div class="grid2">
-          <div id="formRegister" class="card">
-            <h3>Créer un compte</h3>
-            <label for="regEmail">Email</label>
-            <input id="regEmail" type="email" placeholder="you@example.com" />
-            <label for="regPassword">Mot de passe</label>
-            <input id="regPassword" type="password" placeholder="••••••••" />
-            <div class="row" style="margin-top:10px">
-              <button id="btnRegister" type="button">S’inscrire</button>
-            </div>
-            <div id="regMsg" class="muted" style="margin-top:6px"></div>
-          </div>
+    <nav class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('auth')">🔐 Connexion</button>
+      <button class="tab-btn" onclick="switchTab('game')">⚽ Mon Équipe</button>
+    </nav>
 
-          <div id="formLogin" class="card">
+    <div id="viewAuth" class="tab-content active">
+      <section style="max-width: 400px; margin: 0 auto;">
+        <h2>Authentification</h2>
+        <p class="muted">Connectez-vous pour gérer votre équipe.</p>
+        
+        <div id="formLogin" class="card" style="margin-bottom: 20px;">
             <h3>Se connecter</h3>
             <label for="loginEmail">Email</label>
             <input id="loginEmail" type="email" placeholder="you@example.com" />
@@ -79,25 +136,37 @@
               <button id="btnLogin" type="button">Se connecter</button>
             </div>
             <div id="loginMsg" class="muted" style="margin-top:6px"></div>
-          </div>
+        </div>
+
+        <div id="formRegister" class="card">
+            <h3>Créer un compte</h3>
+            <label for="regEmail">Email</label>
+            <input id="regEmail" type="email" placeholder="you@example.com" />
+            <label for="regPassword">Mot de passe</label>
+            <input id="regPassword" type="password" placeholder="••••••••" />
+            <div class="row" style="margin-top:10px">
+              <button id="btnRegister" type="button">S’inscrire</button>
+            </div>
+            <div id="regMsg" class="muted" style="margin-top:6px"></div>
         </div>
       </section>
+    </div>
 
-      <!-- Team actions -->
-      <section>
-        <h2>Mon équipe</h2>
-        <div class="row" style="align-items:end">
-          <div style="flex:1">
-            <label for="teamName">Nom de l’équipe</label>
-            <input id="teamName" type="text" placeholder="Dream FC" />
+    <div id="viewGame" class="tab-content">
+      <div class="col-left list">
+        <section>
+          <h2>Mon équipe</h2>
+          <div class="row" style="align-items:end">
+            <div style="flex:1">
+              <label for="teamName">Nom de l’équipe</label>
+              <input id="teamName" type="text" placeholder="Dream FC" />
+            </div>
+            <div>
+              <label>&nbsp;</label>
+              <button id="btnCreateTeam" type="button">Créer / Réinitialiser</button>
+            </div>
           </div>
-          <div>
-            <label>&nbsp;</label>
-            <button id="btnCreateTeam" type="button">Créer / Réinitialiser</button>
-          </div>
-        </div>
-
-        <div id="teamCard" class="card" style="margin-top:10px">
+          <div id="teamCard" class="card" style="margin-top:10px">
           <div class="row" style="justify-content:space-between; align-items:center;">
             <div>
               <div class="muted">Nom</div>
@@ -108,26 +177,39 @@
               <div id="teamBudget" class="ok">–</div>
             </div>
           </div>
+          
+          <div class="budget-bar-bg">
+            <div id="budgetBar" class="budget-bar-fill" style="width: 100%;"></div>
+          </div>
+
           <div style="margin-top:12px">
             <div class="muted">Joueurs</div>
             <div id="teamPlayers" class="list"></div>
           </div>
         </div>
-        <div id="teamMsg" class="muted" style="margin-top:6px"></div>
-      </section>
-    </div>
+          </div>
+          <div id="teamMsg" class="muted" style="margin-top:6px"></div>
+        </section>
+      </div>
 
-    <!-- Colonne droite -->
-    <div class="col-right list">
-      <section>
-        <h2>Joueurs du pool</h2>
-        <div class="row" style="justify-content:space-between; align-items:center">
-          <div class="muted">GET /players</div>
-          <button id="btnRefreshPlayers" class="ghost" type="button">Rafraîchir</button>
-        </div>
-        <div id="playersList" class="list" style="margin-top:12px"></div>
-        <div id="playersMsg" class="muted" style="margin-top:6px"></div>
-      </section>
+      <div class="col-right list">
+        <section>
+          <h2>Joueurs du pool</h2>
+          <div class="row" style="justify-content:space-between; align-items:center">
+            <div class="muted">GET /players</div>
+            <button id="btnRefreshPlayers" class="ghost" type="button">Rafraîchir</button>
+          </div>
+
+          <div id="playersList" class="list" style="margin-top:12px"></div>
+          <div id="playersMsg" class="muted" style="margin-top:6px"></div>
+
+          <div class="row" style="justify-content: center; margin-top: 15px; gap: 10px;">
+            <button id="btnPrev" class="ghost" disabled>◀ Précédent</button>
+            <span id="pageIndicator" class="muted" style="align-self:center">Page 1</span>
+            <button id="btnNext" class="ghost">Suivant ▶</button>
+          </div>
+        </section>
+      </div>
     </div>
   </main>
 

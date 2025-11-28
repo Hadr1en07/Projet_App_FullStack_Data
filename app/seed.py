@@ -29,7 +29,7 @@ load_dotenv()
 # Config
 # ---------------------------------------------------------------------
 
-# Chemin vers ton CSV (change ici si ton fichier a un autre nom)
+# Chemin vers ton CSV
 CSV_PATH = os.getenv("PLAYERS_CSV", "app/data/players_seed.csv")
 
 # Hash de mot de passe (Argon2)
@@ -63,39 +63,16 @@ def get_user_by_email(db: Session, email: str) -> User | None:
 
 # Mapping de position brute -> position simplifiée pour le jeu
 POSITION_MAP = {
-    "Goalkeeper": "GK",
-    "GK": "GK",
-    "Goalie": "GK",
-
-    "Defender": "DEF",
-    "Centre-Back": "DEF",
-    "Center Back": "DEF",
-    "Left-Back": "DEF",
-    "Right-Back": "DEF",
-    "Left Back": "DEF",
-    "Right Back": "DEF",
-    "CB": "DEF",
-    "LB": "DEF",
-    "RB": "DEF",
-
-    "Midfielder": "MID",
-    "Central Midfield": "MID",
-    "Attacking Midfield": "MID",
-    "Defensive Midfield": "MID",
-    "CM": "MID",
-    "CAM": "MID",
-    "CDM": "MID",
-    "LM": "MID",
-    "RM": "MID",
-
-    "Forward": "FWD",
-    "Striker": "FWD",
-    "Winger": "FWD",
-    "Left Winger": "FWD",
-    "Right Winger": "FWD",
-    "LW": "FWD",
-    "RW": "FWD",
-    "ST": "FWD",
+    "Goalkeeper": "GK", "GK": "GK", "Goalie": "GK",
+    "Defender": "DEF", "Centre-Back": "DEF", "Center Back": "DEF",
+    "Left-Back": "DEF", "Right-Back": "DEF", "Left Back": "DEF",
+    "Right Back": "DEF", "CB": "DEF", "LB": "DEF", "RB": "DEF",
+    "Midfielder": "MID", "Central Midfield": "MID", "Attacking Midfield": "MID",
+    "Defensive Midfield": "MID", "CM": "MID", "CAM": "MID", "CDM": "MID",
+    "LM": "MID", "RM": "MID",
+    "Forward": "FWD", "Striker": "FWD", "Winger": "FWD",
+    "Left Winger": "FWD", "Right Winger": "FWD", "LW": "FWD",
+    "RW": "FWD", "ST": "FWD",
 }
 
 
@@ -103,26 +80,18 @@ def normalize_position(raw_pos: str) -> str:
     raw_pos = (raw_pos or "").strip()
     if not raw_pos:
         return "MID"
-    # Essai direct
     if raw_pos in POSITION_MAP:
         return POSITION_MAP[raw_pos]
-    # Essai avec capitalisation standard
     key = raw_pos.title()
     if key in POSITION_MAP:
         return POSITION_MAP[key]
-    # Essai sur version upper
     key2 = raw_pos.upper()
     if key2 in POSITION_MAP:
         return POSITION_MAP[key2]
-    # Fallback : milieux par défaut
     return "MID"
 
 
 def _coerce_position(pos_text: str) -> Any:
-    """
-    Si Player.position est un Enum SQLAlchemy, convertit "FWD" -> Enum("FWD").
-    Sinon, renvoie la chaîne telle quelle.
-    """
     if hasattr(Player, "position"):
         col = getattr(Player, "position")
         coltype = getattr(col, "type", None)
@@ -131,21 +100,15 @@ def _coerce_position(pos_text: str) -> Any:
             try:
                 return enum_cls(pos_text)
             except Exception:
-                # Valeur par défaut sûre
                 return list(enum_cls)[0]
-    return pos_text  # string simple
+    return pos_text
 
 
 def _set_price_field(p: Player, value: float) -> None:
-    """
-    Dépose le prix dans le 1er champ existant parmi
-    price_m / price / cost_m / cost / value.
-    """
     for field in ("price_m", "price", "cost_m", "cost", "value"):
         if hasattr(Player, field):
             setattr(p, field, value)
             return
-    # Si aucun champ connu, on crée 'price' dynamiquement (idéalement adapter le modèle)
     setattr(p, "price", value)
 
 
@@ -157,17 +120,12 @@ def _parse_float(raw: str | None, default: float = 10.0) -> float:
 
 
 def iter_players_from_csv() -> Iterable[Tuple[str, str, str, float]]:
-    """
-    Lit le CSV CSV_PATH et produit des tuples (name, club, pos, cost).
-
-    On ne garde que les colonnes utiles. Le reste est ignoré.
-    On essaie plusieurs noms de colonnes possibles pour être robuste.
-    """
     if not os.path.exists(CSV_PATH):
         print(f"[seed] CSV not found: {CSV_PATH}, aucun joueur importé.")
         return []
 
-    with open(CSV_PATH, newline="", encoding="utf-8") as f:
+    # 'utf-8-sig' gère le BOM (Byte Order Mark) souvent ajouté par Excel
+    with open(CSV_PATH, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         rows = list(reader)
 
@@ -176,7 +134,8 @@ def iter_players_from_csv() -> Iterable[Tuple[str, str, str, float]]:
     for row in rows:
         # --- Name ---
         name = (
-            row.get("name")
+            row.get("Name")             # <--- MAJUSCULE AJOUTÉE
+            or row.get("name")
             or row.get("player_name")
             or row.get("short_name")
             or row.get("full_name")
@@ -186,7 +145,8 @@ def iter_players_from_csv() -> Iterable[Tuple[str, str, str, float]]:
 
         # --- Club ---
         club = (
-            row.get("club")
+            row.get("Club")             # <--- MAJUSCULE AJOUTÉE
+            or row.get("club")
             or row.get("club_name")
             or row.get("team")
             or row.get("club_team")
@@ -194,20 +154,10 @@ def iter_players_from_csv() -> Iterable[Tuple[str, str, str, float]]:
         if not club:
             club = "Unknown"
 
-        # --- League (optionnel, pour filtrer) ---
-        league = (
-            row.get("league")
-            or row.get("league_name")
-            or row.get("competition")
-        )
-        # Si tu veux filtrer sur les 5 grands championnats, décommente :
-        # BIG5 = {"Premier League", "La Liga", "Serie A", "Bundesliga", "Ligue 1"}
-        # if league and league not in BIG5:
-        #     continue
-
-        # --- Position brute ---
+        # --- Position ---
         raw_pos = (
-            row.get("position")
+            row.get("Position")         # <--- MAJUSCULE AJOUTÉE
+            or row.get("position")
             or row.get("pos")
             or row.get("primary_position")
             or row.get("role")
@@ -215,9 +165,9 @@ def iter_players_from_csv() -> Iterable[Tuple[str, str, str, float]]:
         norm_pos = normalize_position(raw_pos)
 
         # --- Cost ---
-        # Essaye plusieurs colonnes possibles pour la valeur de marché :
         cost_raw = (
-            row.get("cost")
+            row.get("Market Value")     # <--- MAJUSCULES AJOUTÉES
+            or row.get("cost")
             or row.get("price")
             or row.get("market_value")
             or row.get("market_value_million_eur")
@@ -231,38 +181,23 @@ def iter_players_from_csv() -> Iterable[Tuple[str, str, str, float]]:
 def seed():
     """Point d'entrée du seed."""
     wait_for_db()
+    # On s'assure que les tables existent
     Base.metadata.create_all(bind=engine)
 
     db: Session = SessionLocal()
     try:
-        # -----------------------------------------------------------------
         # 1) Utilisateurs par défaut
-        # -----------------------------------------------------------------
         if not get_user_by_email(db, "admin@example.com"):
-            db.add(
-                User(
-                    email="admin@example.com",
-                    hashed_password=hash_password("admin123"),
-                    is_admin=True,
-                )
-            )
-
+            db.add(User(email="admin@example.com", hashed_password=hash_password("admin123"), is_admin=True))
         if not get_user_by_email(db, "user@example.com"):
-            db.add(
-                User(
-                    email="user@example.com",
-                    hashed_password=hash_password("user123"),
-                    is_admin=False,
-                )
-            )
-
+            db.add(User(email="user@example.com", hashed_password=hash_password("user123"), is_admin=False))
         db.commit()
 
-        # -----------------------------------------------------------------
         # 2) Joueurs
-        # -----------------------------------------------------------------
+        # On vérifie si la table est vide pour ne pas importer en double
         if db.query(Player).count() == 0:
             print("[seed] La table Player est vide, import depuis CSV…")
+            count = 0
             for name, club, pos, price in iter_players_from_csv():
                 p = Player(
                     name=name,
@@ -271,15 +206,17 @@ def seed():
                 )
                 _set_price_field(p, price)
                 db.add(p)
-
+                count += 1
             db.commit()
-            print("[seed] Import des joueurs terminé ✅")
+            print(f"[seed] Import terminé : {count} joueurs ajoutés ✅")
         else:
-            print("[seed] Joueurs déjà présents, skip import CSV.")
+            print("[seed] Joueurs déjà présents, pas d'import.")
 
+    except Exception as e:
+        print(f"[seed] ERREUR : {e}")
+        db.rollback()
     finally:
         db.close()
-
 
 if __name__ == "__main__":
     seed()
