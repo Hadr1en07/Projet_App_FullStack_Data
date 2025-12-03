@@ -1,8 +1,8 @@
-// ========= Config =========
-const API = ""; // même origine
+// app/static/js/app.js
+
+// ========= Config & Helpers =========
 const $ = (sel) => document.querySelector(sel);
 
-// ========= Token handling =========
 function setToken(token) {
   const badge = $("#authStatus");
   const logoutBtn = $("#btnLogout");
@@ -16,22 +16,26 @@ function setToken(token) {
     if (logoutBtn) logoutBtn.style.display = "none";
   }
 }
-function getToken() {
-  return localStorage.getItem("token");
-}
+function getToken() { return localStorage.getItem("token"); }
 
-// ========= Fetch helper =========
 async function apiFetch(url, opts = {}) {
-  const { method="GET", body=null, auth=false, json=true, form=false } = opts;
+  let { method="GET", body=null, auth=false, json=true, form=false } = opts;
   const headers = {};
   let payload = body;
+
+  // AUTO-DETECTION : Si le corps est un formulaire, on passe en mode form
+  if (body instanceof URLSearchParams || body instanceof FormData) {
+      form = true;
+      json = false;
+  }
 
   if (auth) {
     const t = getToken();
     if (t) headers["Authorization"] = `Bearer ${t}`;
   }
+
   if (form) {
-    // ne rien faire, le navigateur mettra le bon Content-Type
+    // On laisse le navigateur gérer le Content-Type pour les formulaires
   } else if (json) {
     headers["Content-Type"] = "application/json";
     payload = body != null ? JSON.stringify(body) : null;
@@ -39,33 +43,29 @@ async function apiFetch(url, opts = {}) {
 
   const res = await fetch(url, { method, headers, body: payload });
   if (!res.ok) {
-  let detail = `HTTP ${res.status}`;
-  try {
-    const data = await res.json();
-    detail = typeof data?.detail === "string" ? data.detail : JSON.stringify(data);
-  } catch {}
-  throw new Error(detail);
-}
+    let detail = `HTTP ${res.status}`;
+    try {
+      const data = await res.json();
+      // On affiche le détail technique pour débugger
+      detail = typeof data?.detail === "string" ? data.detail : JSON.stringify(data?.detail || data);
+    } catch {}
+    throw new Error(detail);
+  }
   const ct = res.headers.get("content-type") || "";
   return ct.includes("application/json") ? res.json() : null;
 }
 
-
-// ========= UI helpers =========
 function toast(el, msg, ok = true) {
   if (!el) return;
   el.textContent = msg;
   el.className = ok ? "muted ok" : "muted err";
 }
 
-// ========= Players =========
-// app/static/js/app.js
-
-// --- Variables globales pour la pagination ---
+// ========= Variables Pagination =========
 let currentOffset = 0;
 const PAGE_SIZE = 50;
 
-// ========= Players =========
+// ========= Players (Marché) =========
 async function loadPlayers() {
   const list = $("#playersList");
   const msg = $("#playersMsg");
@@ -77,19 +77,15 @@ async function loadPlayers() {
   toast(msg, "Chargement…", true);
 
   try {
-    // On appelle l'API avec les paramètres skip et limit
-    // GET /players?skip=0&limit=50
     const url = `/players?skip=${currentOffset}&limit=${PAGE_SIZE}`;
     const data = await apiFetch(url);
 
-    if (!Array.isArray(data) || !list) throw new Error("format inattendu");
+    if (!Array.isArray(data)) throw new Error("format inattendu");
 
     if (!data.length) {
-      list.innerHTML = `<div class="muted">Aucun joueur trouvé sur cette page.</div>`;
-      // S'il n'y a plus de joueurs, on désactive le bouton Suivant
+      list.innerHTML = `<div class="muted">Aucun joueur trouvé.</div>`;
       if (btnNext) btnNext.disabled = true;
     } else {
-      // Réactivation du bouton Suivant s'il y a des données
       if (btnNext) btnNext.disabled = (data.length < PAGE_SIZE);
 
       for (const p of data) {
@@ -100,145 +96,164 @@ async function loadPlayers() {
           <div class="pill nowrap">${p.position || "-"}</div>
           <div class="pill right">${(p.cost ?? p.price ?? 0).toLocaleString()} €</div>
           <div class="right">
-            <button data-id="${p.id}" class="add">Ajouter</button>
+            <button class="add">Ajouter</button>
           </div>
         `;
-        // Bouton Ajouter
-        row.querySelector(".add").addEventListener("click", () => addPlayerToTeam(p.id));
+        // Clic pour Ajouter
+        const addBtn = row.querySelector(".add");
+        addBtn.onclick = () => addPlayerToTeam(p.id);
+        
         list.appendChild(row);
       }
     }
     
-    // Mise à jour de l'état des boutons
     if (btnPrev) btnPrev.disabled = (currentOffset === 0);
     if (pageInd) {
         const pageNum = Math.floor(currentOffset / PAGE_SIZE) + 1;
         pageInd.textContent = `Page ${pageNum}`;
     }
-    
     toast(msg, `OK (${data.length} joueurs)`);
 
   } catch (e) {
-    const errText = (e && e.message) ? e.message : String(e);
-    toast(msg, errText, false);
+    toast(msg, e.message, false);
   }
 }
 
-// Fonctions pour changer de page
 function prevPage() {
     if (currentOffset >= PAGE_SIZE) {
         currentOffset -= PAGE_SIZE;
         loadPlayers();
     }
 }
-
 function nextPage() {
     currentOffset += PAGE_SIZE;
     loadPlayers();
 }
 
-
-// ========= Team =========
+// ========= Team (Le Terrain) =========
 async function loadTeam() {
   const nameEl = $("#teamTitle");
   const budgetEl = $("#teamBudget");
-  const playersEl = $("#teamPlayers");
+  const pitchEl = $("#soccerPitch"); // <--- Cible le terrain
   const msg = $("#teamMsg");
-  const t = await apiFetch("/team", { auth: true });
 
-  if (playersEl) playersEl.innerHTML = "";
-  if (nameEl) nameEl.textContent = t?.name ?? "–";
-    if (budgetEl)
-      budgetEl.textContent =
-        t?.budget_left != null ? `${t.budget_left.toLocaleString()} €` : "–";
-  toast(msg, "Chargement…", true);
-
-  const bar = $("#budgetBar");
-    if (bar && t?.total_budget) {
-        // Calcul du pourcentage restant
-        const pct = Math.max(0, (t.budget_left / t.total_budget) * 100);
-        bar.style.width = `${pct}%`;
-        
-        // Bonus : changer la couleur si budget critique (< 10%)
-        if (pct < 10) bar.style.backgroundColor = "#ff5c5c"; // Rouge
-        else bar.style.backgroundColor = "#7fffb0"; // Vert
-    }
+  if (pitchEl) pitchEl.innerHTML = "";
+  if (nameEl) nameEl.textContent = "–";
+  if (budgetEl) budgetEl.textContent = "–";
 
   try {
     const t = await apiFetch("/team", { auth: true });
+
+    // Infos
     if (nameEl) nameEl.textContent = t?.name ?? "–";
     if (budgetEl)
-      budgetEl.textContent =
-        t?.budget_left != null ? `${t.budget_left.toLocaleString()} €` : "–";
+      budgetEl.textContent = t?.budget_left != null 
+        ? `${t.budget_left.toLocaleString()} €` 
+        : "–";
 
-    const arr = Array.isArray(t?.players) ? t.players : [];
-    if (!playersEl) return;
-    if (!arr.length) {
-      playersEl.innerHTML = `<div class="muted">Aucun joueur dans l’équipe.</div>`;
-    } else {
-      for (const p of arr) {
-        const item = document.createElement("div");
-        item.className = "player";
-        item.innerHTML = `
-          <div><strong>${p.name}</strong><div class="muted">${p.club || "-"}</div></div>
-          <div class="pill nowrap">${p.position || "-"}</div>
-          <div class="pill right">${(p.cost ?? p.price ?? 0).toLocaleString()} €</div>
-          <div class="right"><button class="ghost remove" data-id="${p.id}">Retirer</button></div>
-        `;
-        item.querySelector(".remove").addEventListener("click", () => removePlayerFromTeam(p.id));
-        playersEl.appendChild(item);
-      }
+    // Barre Budget
+    const bar = $("#budgetBar");
+    if (bar && t?.total_budget) {
+        const pct = Math.max(0, (t.budget_left / t.total_budget) * 100);
+        bar.style.width = `${pct}%`;
+        bar.style.backgroundColor = (pct < 10) ? "#ff5c5c" : "#7fffb0";
     }
-    toast(msg, "OK");
+
+    const players = Array.isArray(t?.players) ? t.players : [];
+    if (!pitchEl) return;
+
+    // --- LOGIQUE TERRAIN ---
+    // 1. Trier par poste
+    const formation = { "FWD": [], "MID": [], "DEF": [], "GK": [] };
+    players.forEach(p => {
+        const pos = (p.position && formation[p.position]) ? p.position : "MID";
+        formation[pos].push(p);
+    });
+
+    // 2. Afficher ligne par ligne (Haut vers Bas)
+    const rowsOrder = ["FWD", "MID", "DEF", "GK"];
+    const limits = { "FWD": 3, "MID": 3, "DEF": 4, "GK": 1 };
+    rowsOrder.forEach(posKey => {
+        const rowDiv = document.createElement("div");
+        rowDiv.className = "pitch-row";
+        const rowPlayers = formation[posKey];
+
+        const max = limits[posKey];
+
+
+        // Espace vide si personne
+        if (rowPlayers.length === 0) rowDiv.style.minHeight = "80px";
+
+        rowPlayers.forEach(p => {
+            const token = document.createElement("div");
+            token.className = "player-token";
+            token.innerHTML = `
+                <div class="player-pos">${p.position}</div>
+                <div class="player-name" title="${p.name}">${p.name}</div>
+                <div class="player-cost">${(p.cost || 0).toLocaleString()}</div>
+            `;
+
+            // Bouton X (Supprimer)
+            const btnX = document.createElement("div");
+            btnX.className = "btn-remove-x";
+            btnX.textContent = "✕";
+            
+            // --- CORRECTION DU CLIC ---
+            // On attache la fonction directement à l'élément DOM created
+            btnX.onclick = function() {
+                removePlayerFromTeam(p.id);
+            };
+
+            token.appendChild(btnX);
+            rowDiv.appendChild(token);
+        });
+        pitchEl.appendChild(rowDiv);
+    });
+
   } catch (e) {
-  const errText = (e && e.message) ? e.message : String(e);
-  toast(msg, errText, false);
+    toast(msg, e.message, false);
+  }
 }
 
-}
-
+// ========= Actions =========
 async function createTeam(ev) {
   ev.preventDefault();
-  const name = $("#teamName").value.trim();
+  const nameInput = $("#teamName");
+  const name = nameInput.value.trim();
   const msg = $("#teamMsg");
   if (!name) return toast(msg, "Nom requis", false);
 
   try {
     await apiFetch("/team", { method: "POST", body: { name }, auth: true });
     toast(msg, "Équipe créée", true);
-    $("#teamName").value = "";
+    nameInput.value = "";
     await loadTeam();
   } catch (e) {
-    const errText = (e && e.message) ? e.message : String(e);
-    toast(msg, errText, false);  // pas d’[object Object]
+    toast(msg, e.message, false);
   }
 }
 
 async function addPlayerToTeam(playerId) {
   const msg = $("#teamMsg");
   try {
-    // backend attend List[int] -> on envoie [playerId]
     await apiFetch("/team/players", { method: "POST", body: [playerId], auth: true });
     await loadTeam();
     toast(msg, "Joueur ajouté", true);
   } catch (e) {
-  const errText = (e && e.message) ? e.message : String(e);
-  toast(msg, errText, false);
-}
-
+    toast(msg, e.message, false);
+  }
 }
 
 async function removePlayerFromTeam(playerId) {
   const msg = $("#teamMsg");
   try {
+    // console.log("Suppression joueur", playerId);
     await apiFetch(`/team/players/${playerId}`, { method: "DELETE", auth: true });
     await loadTeam();
     toast(msg, "Joueur retiré", true);
    } catch (e) {
-  const errText = (e && e.message) ? e.message : String(e);
-  toast(msg, errText, false);
-}
-
+    toast(msg, e.message, false);
+  }
 }
 
 // ========= Auth =========
@@ -246,38 +261,31 @@ async function register() {
   const email = $("#regEmail")?.value.trim();
   const password = $("#regPassword")?.value;
   const msg = $("#regMsg");
-  if (!email || !password) return toast(msg, "Email et mot de passe requis", false);
+  if (!email || !password) return toast(msg, "Email/MDP requis", false);
 
   try {
     await apiFetch("/auth/register", { method: "POST", body: { email, password } });
     toast(msg, "Compte créé ✅", true);
   } catch (e) {
-  const errText = (e && e.message) ? e.message : String(e);
-  toast(msg, errText, false);
-}
-
+    toast(msg, e.message, false);
+  }
 }
 
 async function login() {
   const email = $("#loginEmail")?.value.trim();
   const password = $("#loginPassword")?.value;
   const msg = $("#loginMsg");
-  if (!email || !password) return toast(msg, "Email et mot de passe requis", false);
+  if (!email || !password) return toast(msg, "Email/MDP requis", false);
 
   try {
-    // OAuth2PasswordRequestForm -> x-www-form-urlencoded
     const fd = new URLSearchParams();
     fd.set("username", email);
     fd.set("password", password);
 
-    const data = await apiFetch("/auth/login", {
-      method: "POST",
-      body: fd,
-      form: true,
-    });
-
+    const data = await apiFetch("/auth/login", { method: "POST", body: fd, form: true });
     setToken(data?.access_token || "");
     toast(msg, "Connecté ✅", true);
+    switchTab('game'); // Bascule auto
     await loadTeam();
   } catch (e) {
     setToken("");
@@ -285,55 +293,58 @@ async function login() {
   }
 }
 
-// ========= Init =========
+// ========= Init & Tabs =========
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+  const contentId = (tabName === 'auth') ? 'viewAuth' : 'viewGame';
+  document.getElementById(contentId).classList.add('active');
+
+  const btns = document.querySelectorAll('.tab-btn');
+  if (btns.length >= 2) {
+      if (tabName === 'auth') btns[0].classList.add('active');
+      else btns[1].classList.add('active');
+  }
+}
+window.switchTab = switchTab; // Pour le HTML onclick
+
 function boot() {
   setToken(getToken());
 
-  // Boutons (on ne s'appuie plus sur les <form> submit)
+  // Listeners
   $("#btnRegister")?.addEventListener("click", register);
   $("#btnLogin")?.addEventListener("click", login);
   $("#btnCreateTeam")?.addEventListener("click", createTeam);
-  $("#btnRefreshPlayers")?.addEventListener("click", loadPlayers);
-  $("#btnLogout")?.addEventListener("click", () => setToken(""));
-
-  // Activer/désactiver le bouton créer en fonction du champ
-  const nameInput = $("#teamName");
-  const createBtn = $("#btnCreateTeam");
-  function updateCreateBtn() {
-    if (createBtn) createBtn.disabled = !(nameInput && nameInput.value.trim());
-  }
-  nameInput?.addEventListener("input", updateCreateBtn);
-  updateCreateBtn();
-
-  // Premier chargement
-  loadPlayers();
-  if (getToken()) loadTeam();
-
-  // Boutons de pagination
-  $("#btnPrev")?.addEventListener("click", prevPage);
-  $("#btnNext")?.addEventListener("click", nextPage);
-  
-  // Le bouton rafraîchir remet à zéro
   $("#btnRefreshPlayers")?.addEventListener("click", () => {
       currentOffset = 0;
       loadPlayers();
   });
+  $("#btnLogout")?.addEventListener("click", () => {
+      setToken("");
+      switchTab('auth');
+  });
+
+  $("#btnPrev")?.addEventListener("click", prevPage);
+  $("#btnNext")?.addEventListener("click", nextPage);
+
+  const nameInput = $("#teamName");
+  const createBtn = $("#btnCreateTeam");
+  if(nameInput && createBtn) {
+    nameInput.addEventListener("input", () => {
+        createBtn.disabled = !nameInput.value.trim();
+    });
+    createBtn.disabled = !nameInput.value.trim();
+  }
+
+  // Premier chargement
+  loadPlayers();
+  if (getToken()) {
+      switchTab('game');
+      loadTeam();
+  } else {
+      switchTab('auth');
+  }
 }
 
-// Fonction pour changer d'onglet
-function switchTab(tabName) {
-  // 1. Enlever la classe "active" de tous les contenus et boutons
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-
-  // 2. Ajouter la classe "active" au bon contenu
-  const contentId = (tabName === 'auth') ? 'viewAuth' : 'viewGame';
-  document.getElementById(contentId).classList.add('active');
-
-  // 3. Ajouter la classe "active" au bon bouton (astuce simple par index ou texte)
-  // Ici on fait simple : on suppose que le 1er bouton est Auth, le 2eme est Game
-  const btns = document.querySelectorAll('.tab-btn');
-  if (tabName === 'auth') btns[0].classList.add('active');
-  else btns[1].classList.add('active');
-}
 document.addEventListener("DOMContentLoaded", boot);

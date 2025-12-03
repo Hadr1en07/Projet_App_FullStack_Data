@@ -92,36 +92,56 @@ def create_team(db: Session, owner: models.User, team_in: schemas.TeamCreate, bu
         add_players_to_team(db, team, team_in.players, budget)
     return team
 
+# Définition de la tactique (1-4-3-3)
+MAX_PLAYERS_PER_POSITION = {
+    "GK": 1,
+    "DEF": 4,
+    "MID": 3,
+    "FWD": 3
+}
 
 def add_players_to_team(db: Session, team: models.Team, player_ids: List[int], budget: int) -> models.Team:
-    """Ajoute une liste de joueurs à l'équipe après validation du budget.
+    """Ajoute des joueurs avec vérification du budget ET de la tactique (1-4-3-3)."""
+    
+    # 1. On compte les joueurs actuels par poste
+    current_counts = {"GK": 0, "DEF": 0, "MID": 0, "FWD": 0}
+    for p in team.players:
+        # On gère le cas où un poste serait mal écrit dans la base
+        pos = p.position if p.position in current_counts else "MID"
+        current_counts[pos] += 1
 
-    Args:
-        db: session SQLAlchemy
-        team: équipe à mettre à jour
-        player_ids: liste des IDs de joueurs à ajouter
-        budget: budget maximum autorisé
-
-    Returns:
-        L'équipe mise à jour.
-    """
-    # Ajouter chaque joueur s'il n'est pas déjà présent
+    # 2. On essaie d'ajouter les nouveaux joueurs
     for pid in player_ids:
         player = get_player(db, pid)
         if not player:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Player {pid} not found")
-        if player not in team.players:
-            team.players.append(player)
-    # Vérifier le budget
+        
+        # Si le joueur est déjà dans l'équipe, on passe
+        if player in team.players:
+            continue
+
+        # --- VÉRIFICATION TACTIQUE ---
+        pos = player.position
+        # Si la position n'est pas standard, on la considère comme MID par défaut
+        if pos not in current_counts:
+            pos = "MID"
+
+        if current_counts[pos] >= MAX_PLAYERS_PER_POSITION.get(pos, 3):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail=f"Tactique 1-4-3-3 : Impossible d'ajouter plus de {MAX_PLAYERS_PER_POSITION.get(pos)} {pos}."
+            )
+        
+        # Si c'est bon, on incrémente le compteur temporaire et on ajoute
+        current_counts[pos] += 1
+        team.players.append(player)
+
+    # 3. Vérification du Budget (Code existant)
     total_cost = sum(p.cost for p in team.players)
     if total_cost > budget:
-        # Supprimer les joueurs ajoutés pour ne pas laisser un état incohérent
-        for pid in player_ids:
-            player = get_player(db, pid)
-            if player in team.players:
-                team.players.remove(player)
-        db.commit()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Budget exceeded")
+        db.rollback() # Annule tout si le budget explose
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Budget dépassé !")
+
     db.add(team)
     db.commit()
     db.refresh(team)
