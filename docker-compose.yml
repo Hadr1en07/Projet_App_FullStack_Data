@@ -31,7 +31,6 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
-    #on reload uvicorn à chaque fois, ça consomme plus de ressources mais c'est plus pratique pour le dev
     command: bash -c "python3 -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
 
