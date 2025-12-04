@@ -1,6 +1,8 @@
 # Projet MyFantasyLeague - Application FullStack Data
 ### Projet réalisé par Hadrien DEJONGHE & Esteban NABONNE - E5 DSIA
 
+![Image création d'équipe](assets/cover_proj.jpg)
+
 MyFantasyLeague est une application de type _fantasy football_ que nous avons développée en Python avec [FastAPI](https://fastapi.tiangolo.com/), [SQLAlchemy](https://www.sqlalchemy.org/) et [PostgreSQL](https://www.postgresql.org/).  Le projet a été réalisé dans le cadre d'un cours appelé "Application Full Stack Data" enseigné par Monsieur Morgan Courivaud à ESIEE Paris. Ce cours est enseigné en dernière année d'école ingénieur (5ème année) pour l'ensemble de la filière "Data Science & Intelligence Artificelle"
 
 ### 📌 Voici en quoi le projet consiste :
