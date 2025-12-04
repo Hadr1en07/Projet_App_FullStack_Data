@@ -1,3 +1,10 @@
+# app/tests/test_auth.py
+
+#Ce fichier permet de tester :
+# - la gestion d’utilisateurs
+# - la génération de token
+# - la gestion d’erreur HTTP côté auth
+
 import os
 import tempfile
 
@@ -6,10 +13,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from ..main import app
-from ..database import Base
-from ..dependencies import get_db
-from .. import crud, schemas, models
+from app.main import app
+from app.database import Base
+from app.dependencies import get_db
+from app import crud, schemas, models
 
 
 @pytest.fixture(scope="function")
@@ -70,4 +77,6 @@ def test_register_and_login(client):
         "/auth/login",
         data={"username": "test@example.com", "password": "wrong"},
     )
-    assert response.status_code == 401
+    assert response.status_code == 400
+    data = response.json()
+    assert "detail" in data

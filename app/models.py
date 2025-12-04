@@ -77,6 +77,6 @@ class Team(Base):
     owner = relationship("User", back_populates="team")
     players = relationship(
         "Player",
-        secondary="team_players",   # adapte au nom de ta table d’association
-        lazy="selectin"             # ⬅️ charge en un seul SELECT quand on l’utilise
+        secondary="team_players",   
+        lazy="selectin"             
     )

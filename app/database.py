@@ -3,8 +3,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# 1) Si DATABASE_URL est définie -> on l'utilise
-#    (pratique pour SQLite en local ou Postgres en Docker)
+# Si DATABASE_URL est définie -> on l'utilise
 env_url = os.getenv("DATABASE_URL")
 
 if env_url:

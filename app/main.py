@@ -19,7 +19,6 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS (ok pour demo)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -36,7 +35,7 @@ def ui_root():
     p = pathlib.Path("app/templates/index.html")
     return p.read_text(encoding="utf-8")
 
-# DB : créer les tables (si besoin)
+# DB : créer les tables
 models.Base.metadata.create_all(bind=engine)
 
 @app.on_event("startup")

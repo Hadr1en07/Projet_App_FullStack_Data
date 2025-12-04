@@ -163,14 +163,14 @@ async function loadTeam() {
     if (!pitchEl) return;
 
     // --- LOGIQUE TERRAIN ---
-    // 1. Trier par poste
+    // Trier par poste
     const formation = { "FWD": [], "MID": [], "DEF": [], "GK": [] };
     players.forEach(p => {
         const pos = (p.position && formation[p.position]) ? p.position : "MID";
         formation[pos].push(p);
     });
 
-    // 2. Afficher ligne par ligne (Haut vers Bas)
+    // Afficher ligne par ligne (Haut vers Bas)
     const rowsOrder = ["FWD", "MID", "DEF", "GK"];
     const limits = { "FWD": 3, "MID": 3, "DEF": 4, "GK": 1 };
     rowsOrder.forEach(posKey => {
@@ -198,7 +198,6 @@ async function loadTeam() {
             btnX.className = "btn-remove-x";
             btnX.textContent = "✕";
             
-            // --- CORRECTION DU CLIC ---
             // On attache la fonction directement à l'élément DOM created
             btnX.onclick = function() {
                 removePlayerFromTeam(p.id);

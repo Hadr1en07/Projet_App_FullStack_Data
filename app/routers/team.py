@@ -43,10 +43,7 @@ def read_team(
 ):
     team = crud.get_team_by_owner(db, current_user.id)
     if not team:
-        # ANCIEN CODE QUI BLOQUE :
-        # raise HTTPException(status_code=404, detail="Team not found")
         
-        # NOUVEAU CODE : On renvoie une équipe vide par défaut
         return schemas.TeamOut(
             id=-1,              # ID fictif
             name="",            # Nom vide

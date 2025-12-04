@@ -1,4 +1,6 @@
 #type of files to ignore
 __pycache__/
+app/__pycache__/
+app/routers/__pycache__/
 .DS_Store
 */.DS_Store

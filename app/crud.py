@@ -136,7 +136,7 @@ def add_players_to_team(db: Session, team: models.Team, player_ids: List[int], b
         current_counts[pos] += 1
         team.players.append(player)
 
-    # 3. Vérification du Budget (Code existant)
+    # 3. Vérification du Budget
     total_cost = sum(p.cost for p in team.players)
     if total_cost > budget:
         db.rollback() # Annule tout si le budget explose

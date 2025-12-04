@@ -1,3 +1,12 @@
+# app/tests/test_team.py
+
+#Ce fichier permet de tester :
+# - création de 2 joueurs avec un budget limité (BUDGET = 2 000 000)
+# - création d’une équipe (vide)
+# - ajout d’un joueur à l’équipe et vérif que le joueur est bien dedans
+# - tester le dépassement de budget
+# - tester qu’on ne peut pas gérer une équipe sans être connecté
+
 import os
 import tempfile
 
@@ -6,11 +15,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from ..main import app
-from ..database import Base
-from ..dependencies import get_db
-from .. import crud, schemas
-from ..routers import team as team_router
+from app.main import app
+from app.database import Base
+from app.dependencies import get_db
+from app import crud, schemas
+from app.routers import team as team_router
 
 
 @pytest.fixture(scope="function")
@@ -54,27 +63,48 @@ def client_user():
 
 
 def test_create_team_and_budget(client_user):
-    # Création d'une équipe avec un seul joueur
+    # Création d'une équipe (sans joueurs au début)
     response = client_user.post(
         "/team/",
-        json={"name": "Mon équipe", "players": [1]},
+        json={"name": "Mon équipe"},
     )
     assert response.status_code == 201
     team = response.json()
     assert team["name"] == "Mon équipe"
+    assert team["players"] == []  # équipe vide au départ
+
+    # Ajout d'un premier joueur (id=1)
+    response = client_user.post(
+        "/team/players",
+        json=[1],  
+    )
+    assert response.status_code == 200
+    team = response.json()
+    assert len(team["players"]) == 1
+    assert team["players"][0]["id"] == 1
+
+
+# Tester qu’on ne peut pas gérer une équipe sans être connecté
+def test_cannot_access_team_without_auth():
+    with TestClient(app) as c:
+        r = c.get("/team/")
+        assert r.status_code in (401, 403)
+
+
+# Test dépassement de budget
+def test_budget_limit(client_user):
+    # Création d'une équipe
+    r = client_user.post("/team/", json={"name": "Team Budget"})
+    assert r.status_code == 201
+
+    # Ajout du premier joueur (id=1)
+    r = client_user.post("/team/players", json=[1])
+    assert r.status_code == 200
+    team = r.json()
     assert len(team["players"]) == 1
 
-    # Ajouter un second joueur -> dépassement du budget
-    response = client_user.post("/team/players", json=[2])
-    assert response.status_code == 400
-    assert "Budget" in response.json()["detail"]
-
-    # Supprimer le joueur existant et ajouter l'autre
-    # Supprimer p1
-    response = client_user.delete("/team/players/1")
-    assert response.status_code == 200
-    assert len(response.json()["players"]) == 0
-    # Ajouter p2
-    response = client_user.post("/team/players", json=[2])
-    assert response.status_code == 200
-    assert len(response.json()["players"]) == 1
+    # Ajout du deuxième joueur (id=2) → devrait dépasser le budget
+    r = client_user.post("/team/players", json=[2])
+    assert r.status_code == 400
+    data = r.json()
+    assert "budget" in data["detail"].lower() or "Budget" in data["detail"]

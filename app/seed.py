@@ -25,11 +25,7 @@ from app.models import User, Player
 
 load_dotenv()
 
-# ---------------------------------------------------------------------
-# Config
-# ---------------------------------------------------------------------
 
-# Chemin vers ton CSV
 CSV_PATH = os.getenv("PLAYERS_CSV", "app/data/players_seed.csv")
 
 # Hash de mot de passe (Argon2)
@@ -124,7 +120,6 @@ def iter_players_from_csv() -> Iterable[Tuple[str, str, str, float]]:
         print(f"[seed] CSV not found: {CSV_PATH}, aucun joueur importé.")
         return []
 
-    # 'utf-8-sig' gère le BOM (Byte Order Mark) souvent ajouté par Excel
     with open(CSV_PATH, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         rows = list(reader)
@@ -134,7 +129,7 @@ def iter_players_from_csv() -> Iterable[Tuple[str, str, str, float]]:
     for row in rows:
         # --- Name ---
         name = (
-            row.get("Name")             # <--- MAJUSCULE AJOUTÉE
+            row.get("Name")             
             or row.get("name")
             or row.get("player_name")
             or row.get("short_name")
@@ -145,7 +140,7 @@ def iter_players_from_csv() -> Iterable[Tuple[str, str, str, float]]:
 
         # --- Club ---
         club = (
-            row.get("Club")             # <--- MAJUSCULE AJOUTÉE
+            row.get("Club")             
             or row.get("club")
             or row.get("club_name")
             or row.get("team")
@@ -156,7 +151,7 @@ def iter_players_from_csv() -> Iterable[Tuple[str, str, str, float]]:
 
         # --- Position ---
         raw_pos = (
-            row.get("Position")         # <--- MAJUSCULE AJOUTÉE
+            row.get("Position")         
             or row.get("position")
             or row.get("pos")
             or row.get("primary_position")
@@ -166,7 +161,7 @@ def iter_players_from_csv() -> Iterable[Tuple[str, str, str, float]]:
 
         # --- Cost ---
         cost_raw = (
-            row.get("Market Value")     # <--- MAJUSCULES AJOUTÉES
+            row.get("Market Value")     
             or row.get("cost")
             or row.get("price")
             or row.get("market_value")
@@ -186,14 +181,14 @@ def seed():
 
     db: Session = SessionLocal()
     try:
-        # 1) Utilisateurs par défaut
+        # Utilisateurs par défaut
         if not get_user_by_email(db, "admin@example.com"):
             db.add(User(email="admin@example.com", hashed_password=hash_password("admin123"), is_admin=True))
         if not get_user_by_email(db, "user@example.com"):
             db.add(User(email="user@example.com", hashed_password=hash_password("user123"), is_admin=False))
         db.commit()
 
-        # 2) Joueurs
+        # Joueurs
         # On vérifie si la table est vide pour ne pas importer en double
         if db.query(Player).count() == 0:
             print("[seed] La table Player est vide, import depuis CSV…")

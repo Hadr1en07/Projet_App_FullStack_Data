@@ -1,3 +1,10 @@
+# app/tests/test_players.py
+
+#Ce fichier permet de tester :
+# - la logique admin-only
+# - le CRUD complet
+# - les codes 201 / 200 / 204 / 404
+
 import os
 import tempfile
 
@@ -6,10 +13,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from ..main import app
-from ..database import Base
-from ..dependencies import get_db
-from .. import crud, schemas
+from app.main import app
+from app.database import Base
+from app.dependencies import get_db
+from app import crud, schemas
 
 
 @pytest.fixture(scope="function")
